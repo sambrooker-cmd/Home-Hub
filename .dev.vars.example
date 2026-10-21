@@ -1,0 +1,11 @@
+# Copy this file to .dev.vars for local testing with `npm run dev`.
+# For the live version, set each of these with: npx wrangler secret put NAME
+DASHBOARD_TOKEN=paste-a-long-random-string
+SHORTCUT_TOKEN=paste-a-different-long-random-string
+NTFY_TOPIC=paste-a-long-unguessable-topic-name
+BIN_ICS_URL=https://your-council-bin-calendar-link.ics
+HOME_LATLON=51.4500,0.2500
+WORK_LATLON=51.4800,0.2300
+TOMTOM_KEY=
+TMDB_KEY=
+PUBLIC_URL=https://home-hub.your-subdomain.workers.dev

@@ -1,0 +1,24 @@
+{
+  "name": "home-hub",
+  "version": "0.1.0",
+  "description": "Home Hub: notifications and wall dashboard on Cloudflare Workers",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "check": "tsc --noEmit",
+    "make-token": "node -e \"console.log(require('crypto').randomBytes(24).toString('base64url'))\""
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261021.1",
+    "happy-dom": "^21.0.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.3"
+  },
+  "private": true,
+  "type": "module"
+}

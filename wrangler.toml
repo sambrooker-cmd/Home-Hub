@@ -1,0 +1,29 @@
+name = "home-hub"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+# Runs the checks every 10 minutes. All timing decisions are made in UK time
+# inside the code, so this never needs changing for the clocks going back/forward.
+[triggers]
+crons = ["*/10 * * * *"]
+
+# Storage for cached data. Create it with:
+#   npx wrangler kv namespace create HUB
+# then paste the id it prints below.
+[[kv_namespaces]]
+binding = "HUB"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[vars]
+# Switch modules on/off by editing this list, then run `npm run deploy`.
+MODULES = "bins,commute,dartcharge,f1,watch,weather"
+# Commute alert threshold: minutes slower than usual before you get a notification.
+COMMUTE_ALERT_MINUTES = "10"
+# TMDB streaming provider ids for the UK, separated by | (see README for the list).
+WATCH_PROVIDERS = "8|9"
+# Optional TMDB genre ids separated by | (blank = any genre).
+WATCH_GENRES = ""
+
+# Secrets are NOT stored here. Set each one with:  npx wrangler secret put NAME
+#   DASHBOARD_TOKEN, SHORTCUT_TOKEN, NTFY_TOPIC, BIN_ICS_URL,
+#   HOME_LATLON, WORK_LATLON, TOMTOM_KEY, TMDB_KEY, PUBLIC_URL
