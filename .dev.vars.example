@@ -9,3 +9,17 @@ WORK_LATLON=51.4800,0.2300
 TOMTOM_KEY=
 TMDB_KEY=
 PUBLIC_URL=https://home-hub.your-subdomain.workers.dev
+# Add-ons (leave blank if not used)
+VOICEMONKEY_TOKEN=
+VEHICLES=car:AB12CDE,bike:XY70ZZZ
+DVLA_VES_KEY=
+DVSA_API_KEY=
+DVSA_CLIENT_ID=
+DVSA_CLIENT_SECRET=
+DVSA_TOKEN_URL=https://login.microsoftonline.com/your-tenant-id/oauth2/v2.0/token
+GLOW_USERNAME=
+GLOW_PASSWORD=
+ELEC_UNIT_P=
+ELEC_STANDING_P=
+GAS_UNIT_P=
+GAS_STANDING_P=

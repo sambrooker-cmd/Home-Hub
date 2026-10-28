@@ -5,7 +5,8 @@
 
 import type { Env } from "../env";
 import { getJSON, putJSON } from "../store";
-import { notifyOnce } from "../notify";
+import { firstTime, notifyOnce } from "../notify";
+import * as alexa from "../alexa";
 import { ukDayTime, type LondonTime } from "../time";
 
 const BASE = "https://api.jolpi.ca/ergast/f1";
@@ -159,11 +160,16 @@ export async function tick(env: Env, t: LondonTime, now: Date): Promise<void> {
       if (!/Qualifying|Sprint|Race/.test(s.name)) continue;
       const mins = (new Date(s.start).getTime() - now.getTime()) / 60000;
       if (mins > 0 && mins <= 35) {
-        await notifyOnce(env, `f1:soon:${race.round}:${s.name}`, {
+        const sent = await notifyOnce(env, `f1:soon:${race.round}:${s.name}`, {
           title: `${s.name} in ${Math.round(mins)} min`,
           message: `${race.name}, starts ${ukDayTime(new Date(s.start))} UK time.`,
           tags: ["racing_car"],
         });
+        if (sent) await alexa.say(env, t, `${s.name} starts in ${Math.round(mins)} minutes.`);
+      }
+      // A few minutes before the race: Alexa routine, e.g. TV on and lamp down.
+      if (s.name === "Race" && env.ALEXA_TRIGGER_RACE && mins > 0 && mins <= 12 && (await firstTime(env, `f1:tv:${race.round}`, 7))) {
+        await alexa.trigger(env, t, env.ALEXA_TRIGGER_RACE);
       }
     }
 

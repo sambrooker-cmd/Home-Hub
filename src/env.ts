@@ -34,10 +34,35 @@ export interface Env {
 
   // --- Public base URL of this worker, used in notification links ---
   PUBLIC_URL?: string; // e.g. https://home-hub.yourname.workers.dev
+
+  // --- Alexa via Voice Monkey ---
+  VOICEMONKEY_TOKEN?: string; // secret
+  ALEXA_SPEAKERS?: string; // Voice Monkey speaker device ids, comma list, e.g. "kitchen,hallway"
+  ALEXA_QUIET?: string; // "21:00-07:00": nothing spoken or switched on in these hours
+  ALEXA_TRIGGER_BINS?: string; // Routine Trigger device id: bin-night lamp
+  ALEXA_TRIGGER_RACE?: string; // Routine Trigger device id: TV on before the race
+
+  // --- Vehicles (MOT and tax) ---
+  VEHICLES?: string; // secret: "car:AB12CDE,bike:XY70ZZZ" (label:reg)
+  DVLA_VES_KEY?: string; // secret: DVLA Vehicle Enquiry Service key
+  DVSA_API_KEY?: string; // secrets: DVSA MOT History API
+  DVSA_CLIENT_ID?: string;
+  DVSA_CLIENT_SECRET?: string;
+  DVSA_TOKEN_URL?: string; // from the DVSA credentials email
+  DVSA_SCOPE?: string; // default https://tapi.dvsa.gov.uk/.default
+
+  // --- Energy (smart meter via Glowmarkt / Bright app) ---
+  GLOW_USERNAME?: string; // secrets: Bright app login
+  GLOW_PASSWORD?: string;
+  GLOW_APP_ID?: string; // optional: Glowmarkt application id (the Bright app's one by default)
+  ELEC_UNIT_P?: string; // optional secrets, pence: used if the meter's cost data is empty
+  ELEC_STANDING_P?: string;
+  GAS_UNIT_P?: string;
+  GAS_STANDING_P?: string;
 }
 
 export function moduleOn(env: Env, name: string): boolean {
-  const list = (env.MODULES ?? "bins,commute,dartcharge,f1,watch,weather")
+  const list = (env.MODULES ?? "bins,commute,dartcharge,f1,watch,weather,vehicles,energy")
     .split(",")
     .map((s) => s.trim().toLowerCase());
   return list.includes(name);

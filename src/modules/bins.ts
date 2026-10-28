@@ -5,6 +5,7 @@
 import type { Env } from "../env";
 import { getJSON, putJSON } from "../store";
 import { notifyOnce } from "../notify";
+import * as alexa from "../alexa";
 import { addDays, dayLabel, type LondonTime } from "../time";
 
 export interface Collection {
@@ -134,11 +135,15 @@ export async function tick(env: Env, t: LondonTime): Promise<void> {
     const tomorrow = addDays(t.date, 1);
     const c = cols.find((x) => x.date === tomorrow);
     if (c) {
-      await notifyOnce(env, `bins:${c.date}`, {
+      const sent = await notifyOnce(env, `bins:${c.date}`, {
         title: `Bins tomorrow: ${binText(c)}`,
         message: `Put the ${binText(c).toLowerCase()} out tonight.`,
         tags: ["wastebasket"],
       });
+      if (sent) {
+        await alexa.say(env, t, `Bins tomorrow: ${c.bins.join(" and ").toLowerCase()}. Put them out tonight.`);
+        await alexa.trigger(env, t, env.ALEXA_TRIGGER_BINS); // e.g. the hallway lamp turns green
+      }
     }
   }
 }

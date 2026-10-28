@@ -8,6 +8,7 @@
 import { parseLatLon, type Env } from "../env";
 import { getJSON, putJSON } from "../store";
 import { notifyOnce } from "../notify";
+import * as alexa from "../alexa";
 import { inWindow, type LondonTime } from "../time";
 
 export interface RouteTime {
@@ -92,7 +93,7 @@ export async function tick(env: Env, t: LondonTime): Promise<void> {
   if (main.delayMinutes >= alertMinutes) {
     const altLine =
       alt && alt.minutes < main.minutes ? `\nAlternative route: ${alt.minutes} min (${alt.lengthKm} km).` : "";
-    await notifyOnce(
+    const sent = await notifyOnce(
       env,
       `commute:${t.date}:${direction}`,
       {
@@ -105,6 +106,15 @@ export async function tick(env: Env, t: LondonTime): Promise<void> {
       },
       1,
     );
+    // Spoken in the morning only: in the evening nobody is home to hear it.
+    if (sent && direction === "to work") {
+      const altSpeech = alt && alt.minutes < main.minutes ? ` The other route is ${alt.minutes}.` : "";
+      await alexa.say(
+        env,
+        t,
+        `Heads up: ${main.minutes} minutes to work today, ${main.delayMinutes} slower than usual.${altSpeech}`,
+      );
+    }
   }
 }
 

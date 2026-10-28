@@ -6,8 +6,10 @@
 //   GET  /api/state?token=<DASHBOARD_TOKEN>    dashboard data (JSON)
 //   POST /api/watch/feedback?token=..&type=movie|tv&id=123   "seen it"/"not for me"
 //   GET  /api/test?token=<DASHBOARD_TOKEN>     sends a test notification
-//   GET  /api/run?token=<DASHBOARD_TOKEN>      runs every check now (for testing)
+//   GET  /api/run?token=<DASHBOARD_TOKEN>      runs every check now, incl. the weekly/daily reads (for testing)
 //   GET  /api/providers?token=<DASHBOARD_TOKEN> lists UK streaming services and their TMDB ids
+//   GET  /api/alexa-test?token=<DASHBOARD_TOKEN> says a test message on the Alexa speakers
+//   GET  /api/vehicles?token=<DASHBOARD_TOKEN>  stored MOT/tax details, incl. average miles a year
 //   GET|POST /crossed?token=<SHORTCUT_TOKEN>   iPhone Shortcut: "I crossed the Dartford Crossing"
 //   GET|POST /paid?token=<SHORTCUT_TOKEN>      mark Dart Charge crossings paid
 //   GET  /health                               simple "ok"
@@ -22,6 +24,9 @@ import * as dart from "./modules/dartcharge";
 import * as f1 from "./modules/f1";
 import * as watch from "./modules/watch";
 import * as weather from "./modules/weather";
+import * as vehicles from "./modules/vehicles";
+import * as energy from "./modules/energy";
+import * as alexa from "./alexa";
 
 function publicUrl(env: Env, req?: Request): string {
   if (env.PUBLIC_URL) return env.PUBLIC_URL.replace(/\/$/, "");
@@ -50,7 +55,7 @@ const page = (title: string, body: string) =>
   );
 
 /** Run every switched-on module. Each one is isolated so one failure can't stop the others. */
-async function runAll(env: Env, now: Date, url: string): Promise<Record<string, string>> {
+async function runAll(env: Env, now: Date, url: string, force = false): Promise<Record<string, string>> {
   const t = london(now);
   const jobs: [string, () => Promise<void>][] = [
     ["weather", () => weather.tick(env, t)],
@@ -59,6 +64,9 @@ async function runAll(env: Env, now: Date, url: string): Promise<Record<string, 
     ["dartcharge", () => dart.tick(env, t, url)],
     ["f1", () => f1.tick(env, t, now)],
     ["watch", () => watch.tick(env, t)],
+    // Slow modules: weekly / daily on their own schedule; /api/run forces a read now.
+    ["vehicles", () => vehicles.tick(env, t, now, force)],
+    ["energy", () => energy.tick(env, t, now, force)],
   ];
   const report: Record<string, string> = {};
   for (const [name, job] of jobs) {
@@ -87,13 +95,15 @@ function commuteVisible(c: commute.CommuteState | null, t: LondonTime, now: Date
 
 async function state(env: Env, now: Date) {
   const t = london(now);
-  const [w, b, c, d, f, wp] = await Promise.all([
+  const [w, b, c, d, f, wp, v, e] = await Promise.all([
     moduleOn(env, "weather") ? weather.getView(env) : null,
     moduleOn(env, "bins") ? bins.getView(env, t) : null,
     moduleOn(env, "commute") ? commute.getView(env) : null,
     moduleOn(env, "dartcharge") ? dart.unpaid(env).then((l) => dart.view(l, t)) : null,
     moduleOn(env, "f1") ? f1.getView(env, now) : null,
     moduleOn(env, "watch") ? watch.getView(env) : null,
+    moduleOn(env, "vehicles") ? vehicles.getView(env, t) : null,
+    moduleOn(env, "energy") ? energy.getView(env, t) : null,
   ]);
   return {
     now: now.toISOString(),
@@ -103,6 +113,8 @@ async function state(env: Env, now: Date) {
     dart: d,
     f1: f,
     watch: wp,
+    vehicles: v && v.length ? v : null,
+    energy: e,
   };
 }
 
@@ -145,7 +157,16 @@ export default {
         return json({ sent: true });
       }
 
-      if (path === "/api/run") return json(await runAll(env, now, publicUrl(env, req)));
+      if (path === "/api/run") return json(await runAll(env, now, publicUrl(env, req), true));
+
+      // Says a test message on the Alexa speakers (ignores quiet hours).
+      if (path === "/api/alexa-test") {
+        const spoke = await alexa.say(env, london(now), "Home Hub is connected to Alexa.", { ignoreQuiet: true });
+        return json({ spoke, hint: spoke ? undefined : "Check MODULES includes alexa, VOICEMONKEY_TOKEN and ALEXA_SPEAKERS" });
+      }
+
+      // Everything stored about the vehicles, including average miles a year.
+      if (path === "/api/vehicles") return json(await vehicles.details(env));
 
       // Lists UK streaming services and their TMDB ids, for setting WATCH_PROVIDERS.
       if (path === "/api/providers") return json(await watch.ukProviders(env));

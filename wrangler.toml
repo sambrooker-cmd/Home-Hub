@@ -16,7 +16,8 @@ id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
 [vars]
 # Switch modules on/off by editing this list, then run `npm run deploy`.
-MODULES = "bins,commute,dartcharge,f1,watch,weather"
+# vehicles, energy and alexa do nothing until their secrets are set (see README).
+MODULES = "bins,commute,dartcharge,f1,watch,weather,vehicles,energy,alexa"
 # Commute alert threshold: minutes slower than usual before you get a notification.
 COMMUTE_ALERT_MINUTES = "10"
 # TMDB streaming provider ids for the UK, separated by | (see README for the list).
@@ -24,6 +25,17 @@ WATCH_PROVIDERS = "8|9"
 # Optional TMDB genre ids separated by | (blank = any genre).
 WATCH_GENRES = ""
 
+# Alexa (via the free Voice Monkey skill). Device ids are the names you give
+# the devices in the Voice Monkey console. Leave blank to skip that part.
+ALEXA_SPEAKERS = "kitchen,hallway"      # Echo devices that speak reminders
+ALEXA_QUIET = "21:00-07:00"             # nothing spoken or switched on in these hours
+ALEXA_TRIGGER_BINS = ""                 # Routine Trigger for the bin-night lamp, e.g. "bin-lamp"
+ALEXA_TRIGGER_RACE = ""                 # Routine Trigger for TV on before the race, e.g. "race-tv"
+
 # Secrets are NOT stored here. Set each one with:  npx wrangler secret put NAME
 #   DASHBOARD_TOKEN, SHORTCUT_TOKEN, NTFY_TOPIC, BIN_ICS_URL,
 #   HOME_LATLON, WORK_LATLON, TOMTOM_KEY, TMDB_KEY, PUBLIC_URL
+# Add-ons (only the ones you use):
+#   VOICEMONKEY_TOKEN
+#   VEHICLES, DVLA_VES_KEY, DVSA_API_KEY, DVSA_CLIENT_ID, DVSA_CLIENT_SECRET, DVSA_TOKEN_URL
+#   GLOW_USERNAME, GLOW_PASSWORD, and optionally ELEC_UNIT_P, ELEC_STANDING_P, GAS_UNIT_P, GAS_STANDING_P

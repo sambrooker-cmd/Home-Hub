@@ -52,6 +52,17 @@ export function dashboardHtml(token: string): string {
   .st-red { border-color: #e5484d; background: #2a1314; }
   .t-f1 { border-color: #d6453a; }
   .t-watch { border-color: #5b8def; }
+  .t-energy { border-color: #4caf6a; margin-top: 2.4vh; margin-bottom: 0; }
+  .t-energy.alert { border-color: #f0a500; background: #241d0d; }
+  .t-veh { border-color: #2a3038; }
+  .t-veh.amber { border-color: #f0a500; }
+  .t-veh.red { border-color: #e5484d; background: #2a1314; }
+  .veh-line { font-size: 3vh; font-weight: 500; margin-top: 0.6vh; }
+  .veh-line.red { color: #ff9b9e; }
+  .veh-line.amber { color: #f0c766; }
+  .veh-sub { font-size: 2.2vh; color: #b7b1a5; }
+  .spark { display: block; width: 100%; height: 4.5vh; margin-top: 1vh; }
+  .e-alert { font-size: 2.3vh; color: #f0c766; margin-top: 0.6vh; }
 
   .row { display: -webkit-flex; display: flex; }
   .half { -webkit-flex: 1 1 0; flex: 1 1 0; min-width: 0; }
@@ -67,7 +78,7 @@ export function dashboardHtml(token: string): string {
   .stale { font-size: 1.8vh; color: #e5484d; }
 
   /* Night mode: clock only, very dim. */
-  body.night .right, body.night .weather, body.night .nextbins { display: none; }
+  body.night .right, body.night .weather, body.night .nextbins, body.night .t-energy { display: none !important; }
   body.night .left { -webkit-flex: 1 1 auto; flex: 1 1 auto; -webkit-justify-content: center; justify-content: center;
                      -webkit-align-items: center; align-items: center; padding: 0; }
   body.night .clock { color: #3a3631; font-size: 26vh; }
@@ -79,6 +90,9 @@ export function dashboardHtml(token: string): string {
   <div class="left">
     <div class="clock" id="clock">--:--</div>
     <div class="date" id="date"></div>
+    <div class="tile t-energy hidden" id="energy"><div class="k" id="energy-k">Energy</div>
+      <div class="v" id="energy-v"></div><div class="s" id="energy-s"></div><div class="s" id="energy-w"></div>
+      <div id="energy-spark"></div><div class="e-alert hidden" id="energy-a"></div></div>
     <div class="weather hidden" id="weather">
       <div class="w-now" id="w-now"></div>
       <div class="w-days">
@@ -95,6 +109,7 @@ export function dashboardHtml(token: string): string {
       <div class="s" id="dart-s"></div></div>
     <div class="tile hidden" id="commute"><div class="k" id="commute-k">Commute</div><div class="v" id="commute-v"></div>
       <div class="s" id="commute-s"></div></div>
+    <div class="tile t-veh hidden" id="veh"><div class="k">MOT and tax</div><div id="veh-list"></div></div>
     <div class="row">
       <div class="tile t-f1 half hidden" id="f1"><div class="k">F1</div><div class="v" id="f1-v"></div>
         <div class="s" id="f1-s"></div><div class="podium" id="f1-p"></div></div>
@@ -194,6 +209,25 @@ export function dashboardHtml(token: string): string {
       text("commute-s", sub);
     }
 
+    // MOT and tax: only when something is due soon or a new result came in
+    var vl = s.vehicles;
+    if (vl && vl.length) renderVehicles(vl);
+    show("veh", !!(vl && vl.length));
+
+    // Energy: yesterday's cost, this week so far, 14-day bars
+    var e = s.energy;
+    show("energy", !!e);
+    if (e) {
+      text("energy-k", "Energy · " + e.label);
+      text("energy-v", e.total);
+      text("energy-s", e.split);
+      text("energy-w", e.week || "");
+      $("energy-spark").innerHTML = sparkSvg(e.spark || []);
+      text("energy-a", e.alert || "");
+      show("energy-a", !!e.alert);
+      $("energy").className = "tile t-energy" + (e.alert ? " alert" : "");
+    }
+
     // F1
     var f = s.f1;
     show("f1", !!(f && (f.next || f.last)));
@@ -230,6 +264,42 @@ export function dashboardHtml(token: string): string {
     }
     show("watch", any);
     show("tmdb", any);
+  }
+
+  // 14 daily bars as inline SVG (oldest first); missing days are left as gaps.
+  function sparkSvg(vals) {
+    var max = 0, i;
+    for (i = 0; i < vals.length; i++) if (vals[i] !== null && vals[i] > max) max = vals[i];
+    if (!max) return "";
+    var out = '<svg class="spark" viewBox="0 0 140 30" preserveAspectRatio="none" aria-hidden="true">';
+    for (i = 0; i < vals.length; i++) {
+      if (vals[i] === null) continue;
+      var h = Math.max(1, Math.round((vals[i] / max) * 28));
+      var last = i === vals.length - 1;
+      out += '<rect x="' + (i * 10 + 1) + '" y="' + (30 - h) + '" width="8" height="' + h + '" rx="1" fill="' + (last ? "#4caf6a" : "#3a4a3f") + '"></rect>';
+    }
+    return out + "</svg>";
+  }
+
+  function renderVehicles(lines) {
+    var list = $("veh-list");
+    list.innerHTML = "";
+    var worst = "";
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i];
+      var row = document.createElement("div");
+      row.className = "veh-line" + (l.status === "ok" ? "" : " " + l.status);
+      row.textContent = l.label + ": " + l.text;
+      list.appendChild(row);
+      if (l.advisories && l.advisories.length) {
+        var sub = document.createElement("div");
+        sub.className = "veh-sub";
+        sub.textContent = "Last MOT advised: " + l.advisories.join(", ");
+        list.appendChild(sub);
+      }
+      if (l.status === "red" || (l.status === "amber" && worst !== "red")) worst = l.status;
+    }
+    $("veh").className = "tile t-veh" + (worst ? " " + worst : "");
   }
 
   function wire(row, it) {

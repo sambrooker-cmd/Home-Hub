@@ -34,7 +34,10 @@ export function makeEnv(over: Partial<Env> = {}): Env & { HUB: ReturnType<typeof
   } as any;
 }
 
-/** Install a fake global fetch. `routes` maps a URL substring to a JSON or text body. */
+/**
+ * Install a fake global fetch. `routes` maps a URL substring to a JSON or text body,
+ * or to a function `(url, init) => Response | body` for status codes and request checks.
+ */
 export function mockFetch(routes: Record<string, unknown>) {
   const sent: { title: string; body: string; headers: Record<string, string> }[] = [];
   const fn = vi.fn(async (input: any, init?: any) => {
@@ -44,8 +47,10 @@ export function mockFetch(routes: Record<string, unknown>) {
       sent.push({ title: headers.Title, body: String(init?.body ?? ""), headers });
       return new Response("{}", { status: 200 });
     }
-    for (const [frag, body] of Object.entries(routes)) {
+    for (const [frag, route] of Object.entries(routes)) {
       if (url.includes(frag)) {
+        const body = typeof route === "function" ? await route(url, init) : route;
+        if (body instanceof Response) return body;
         return typeof body === "string"
           ? new Response(body, { status: 200 })
           : new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });

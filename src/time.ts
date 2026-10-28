@@ -65,3 +65,14 @@ export function inWindow(t: LondonTime, start: string, end: string): boolean {
   const toMin = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
   return t.minutesOfDay >= toMin(start) && t.minutesOfDay < toMin(end);
 }
+
+/** The instant UK midnight starts a YYYY-MM-DD date (handles BST/GMT). */
+export function ukMidnight(date: string): Date {
+  for (const offsetHours of [0, 1]) {
+    const d = new Date(`${date}T00:00:00Z`);
+    d.setUTCHours(d.getUTCHours() - offsetHours);
+    const t = london(d);
+    if (t.date === date && t.hour === 0 && t.minute === 0) return d;
+  }
+  return new Date(`${date}T00:00:00Z`);
+}

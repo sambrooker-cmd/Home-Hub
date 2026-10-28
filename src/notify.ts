@@ -49,3 +49,11 @@ export async function notifyOnce(env: Env, key: string, n: Note, ttlDays = 3): P
   await env.HUB.put(k, "1", { expirationTtl: ttlDays * 86400 });
   return true;
 }
+
+/** True the first time it is called for a key within `ttlDays` (for things that aren't notifications). */
+export async function firstTime(env: Env, key: string, ttlDays = 3): Promise<boolean> {
+  const k = `once:${key}`;
+  if (await env.HUB.get(k)) return false;
+  await env.HUB.put(k, "1", { expirationTtl: ttlDays * 86400 });
+  return true;
+}

@@ -28,6 +28,16 @@ const sample = {
     movie: { id: 1, type: "movie", title: "Example Film", year: "2024", rating: 7.6, poster: null },
     tv: null,
   },
+  vehicles: [{ label: "Bike", text: "MOT due Sat 14 Mar (5 days)", status: "amber", advisories: ["Tyres"] }],
+  energy: {
+    label: "Yesterday",
+    total: "£4.82",
+    split: "elec £3.10, gas £1.72",
+    week: "This week £9.10 · last week £10.20 by this point",
+    spark: [400, 410, null, 380, 390, 500, 470, 420, 430, 400, 410, 440, 450, 482],
+    alert: "Something's been left on: overnight use 310 W, normally 220 W.",
+    source: "Costs from the smart meter",
+  },
 };
 
 function scriptOf(html: string): string {
@@ -74,6 +84,13 @@ describe("dashboard page", () => {
     expect(document.querySelectorAll("#watch-list .watch").length).toBe(1);
     expect(visible("tmdb")).toBe(true);
     expect(document.getElementById("clock")!.textContent).toMatch(/^\d\d:\d\d$/);
+    expect(visible("veh")).toBe(true);
+    expect(document.getElementById("veh")!.className).toContain("amber");
+    expect(document.getElementById("veh-list")!.textContent).toContain("Bike: MOT due Sat 14 Mar (5 days)");
+    expect(document.getElementById("veh-list")!.textContent).toContain("Last MOT advised: Tyres");
+    expect(document.getElementById("energy-v")!.textContent).toBe("£4.82");
+    expect(document.getElementById("energy")!.className).toContain("alert");
+    expect(document.querySelectorAll("#energy-spark rect").length).toBe(13);
     vi.unstubAllGlobals();
   });
 });

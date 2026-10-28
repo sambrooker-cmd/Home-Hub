@@ -5,6 +5,7 @@
 import type { Env } from "../env";
 import { getJSON, putJSON } from "../store";
 import { notifyOnce } from "../notify";
+import * as alexa from "../alexa";
 import { addDays, dayLabel, london, type LondonTime } from "../time";
 
 export const PAY_URL = "https://www.gov.uk/pay-dartford-crossing-charge";
@@ -64,7 +65,7 @@ export async function tick(env: Env, t: LondonTime, publicUrl: string): Promise<
   // Reminder at 6pm on the due day (and again at 9pm if still unpaid).
   if (due === t.date && (t.hour === 18 || t.hour === 21)) {
     const paidUrl = `${publicUrl}/paid?token=${encodeURIComponent(env.SHORTCUT_TOKEN)}`;
-    await notifyOnce(
+    const sent = await notifyOnce(
       env,
       `dart:${due}:${t.hour}`,
       {
@@ -80,5 +81,7 @@ export async function tick(env: Env, t: LondonTime, publicUrl: string): Promise<
       },
       2,
     );
+    const n = list.length;
+    if (sent) await alexa.say(env, t, `You've got ${n} Dart Charge crossing${n > 1 ? "s" : ""} to pay by midnight.`);
   }
 }

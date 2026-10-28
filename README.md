@@ -16,8 +16,11 @@ Your personal hub: phone notifications for bins, traffic, Dart Charge, F1 and to
 | **F1** | Weekend schedule at 9am on day one, 30 min before qualifying/sprint/race, result and championship lead after the race | Next session with countdown, last race podium |
 | **What to Watch** | 7:30pm: one film and one series on your services | Posters, with "Seen it" / "Not for me" buttons |
 | **Weather** | — | Now, today and tomorrow |
+| **MOT and tax** | 30 days, 7 days and the day before each due date; a new MOT result with its advisories | Shown only when something's due within 30 days; amber within 7, red when overdue |
+| **Energy** | "Something's been left on" (overnight use up 2 nights running), an unusually expensive day, meter gone quiet, and a Monday summary | Yesterday's cost, this week against last, 14-day bars |
+| **Alexa** (optional) | Bins, morning traffic, Dart Charge and F1 reminders spoken on the kitchen and hallway Echo Dots; bin-night lamp and TV on before the race | — |
 
-The dashboard dims to just a clock from 10pm to 6:30am.
+The dashboard dims to just a clock from 10pm to 6:30am. Alexa stays silent from 9pm to 7am.
 
 ---
 
@@ -118,10 +121,70 @@ The hub ignores double triggers within 20 minutes and crossings between 10pm and
 In `wrangler.toml`, edit:
 
 ```toml
-MODULES = "bins,commute,dartcharge,f1,watch,weather"
+MODULES = "bins,commute,dartcharge,f1,watch,weather,vehicles,energy,alexa"
 ```
 
 Remove any you don't want, then `npm run deploy`. Other settings there: `COMMUTE_ALERT_MINUTES` (how much slower before you're alerted).
+
+---
+
+## Alexa (optional)
+
+Alexa speaks reminders in the kitchen and hallway and starts two routines. It goes through **Voice Monkey**, a free Alexa skill (free plan: 5 speakers and 3 routine triggers; this uses 2 of each).
+
+1. Sign up at https://voicemonkey.io, then enable the **Voice Monkey** skill in the Alexa app and link it.
+2. In the Voice Monkey console, add two **Speaker** devices for the kitchen and hallway Dots. Name them `kitchen` and `hallway` (or change `ALEXA_SPEAKERS` in `wrangler.toml` to match).
+3. Copy your API token from the console: `npx wrangler secret put VOICEMONKEY_TOKEN`.
+4. Test: open `https://<your-hub>/api/alexa-test?token=<DASHBOARD_TOKEN>`. Both Dots should say "Home Hub is connected to Alexa."
+5. **Bin-night lamp (optional):** in Voice Monkey add a **Routine Trigger** device called `bin-lamp`. In the Alexa app, make a Routine: *When this happens* → Smart Home → `bin-lamp`; action: turn your chosen bulb on, green (or a lamp's smart plug on). Set `ALEXA_TRIGGER_BINS = "bin-lamp"` in `wrangler.toml`.
+6. **TV on for the race (optional):** add a Routine Trigger called `race-tv`, and a Routine that turns the living room TV on and switches to the Sky Stream's input (and dims a lamp if you like). Sky Stream has no Alexa control, so choose the channel with the Sky remote. Set `ALEXA_TRIGGER_RACE = "race-tv"`.
+7. `npm run deploy`.
+
+To change the quiet hours, edit `ALEXA_QUIET` (default `"21:00-07:00"`). Phone notifications still arrive during quiet hours. To switch Alexa off, remove `alexa` from `MODULES`.
+
+---
+
+## MOT and tax
+
+1. Register for the **DVSA MOT History API**: https://documentation.history.mot.api.gov.uk/mot-history-api/register. You'll get an API key, a client ID, a client secret and a token URL by email.
+2. Optional: the **DVLA Vehicle Enquiry Service** adds tax dates (https://developer-portal.driver-vehicle-licensing.api.gov.uk). Its registrations were closed in October 2026; without it you still get MOT dates, results and advisories.
+3. Set the secrets:
+
+```bash
+npx wrangler secret put VEHICLES            # e.g. car:AB12CDE,bike:XY70ZZZ
+npx wrangler secret put DVSA_API_KEY
+npx wrangler secret put DVSA_CLIENT_ID
+npx wrangler secret put DVSA_CLIENT_SECRET
+npx wrangler secret put DVSA_TOKEN_URL
+npx wrangler secret put DVLA_VES_KEY        # only if you have one
+```
+
+4. Open `/api/run?token=<DASHBOARD_TOKEN>` to read the vehicles now, then `/api/vehicles?token=<DASHBOARD_TOKEN>` to see what was found (including average miles a year, handy for insurance renewals). After that it checks every Sunday morning.
+
+---
+
+## Energy
+
+Your smart meter's readings come through Hildebrand's free **Bright** app (EDF has no public way in). Do this first: it can take a few days before readings appear.
+
+1. Install **Bright** on your phone, create an account and connect your smart meter. Wait until yesterday's usage shows in the app.
+2. Set your Bright login as secrets:
+
+```bash
+npx wrangler secret put GLOW_USERNAME
+npx wrangler secret put GLOW_PASSWORD
+```
+
+3. Optional, if the dashboard says "No cost data": add your EDF prices in pence from your bill.
+
+```bash
+npx wrangler secret put ELEC_UNIT_P        # e.g. 24.5
+npx wrangler secret put ELEC_STANDING_P    # per day, e.g. 53.2
+npx wrangler secret put GAS_UNIT_P
+npx wrangler secret put GAS_STANDING_P
+```
+
+4. Open `/api/run?token=<DASHBOARD_TOKEN>` to read the last week now. After that it reads once a day after 10am.
 
 ---
 
@@ -134,8 +197,8 @@ Remove any you don't want, then `npm run deploy`. Other settings there: `COMMUTE
 
 ## Costs
 
-Everything here fits in free tiers: Cloudflare Workers (100,000 requests/day; the hub uses about 150 scheduled runs a day plus dashboard refreshes), Cloudflare KV, ntfy, Open-Meteo, Jolpica-F1, TMDB and TomTom's free tier. The dashboard refreshes once a minute, so one tablet uses about 1,440 requests a day.
+Everything here fits in free tiers (the add-ons too: Voice Monkey's free plan, the DVSA/DVLA APIs and Bright are free): Cloudflare Workers (100,000 requests/day; the hub uses about 150 scheduled runs a day plus dashboard refreshes), Cloudflare KV, ntfy, Open-Meteo, Jolpica-F1, TMDB and TomTom's free tier. The dashboard refreshes once a minute, so one tablet uses about 1,440 requests a day.
 
 ## Data sources and credits
 
-Weather: Open-Meteo. F1: Jolpica-F1. Traffic: TomTom. Film and TV: TMDB ("This product uses the TMDB API but is not endorsed or certified by TMDB"). Notifications: ntfy. Unofficial; not associated with Formula 1.
+Weather: Open-Meteo. F1: Jolpica-F1. MOT and tax: DVSA and DVLA. Energy: Hildebrand Glowmarkt (Bright). Alexa: Voice Monkey. Traffic: TomTom. Film and TV: TMDB ("This product uses the TMDB API but is not endorsed or certified by TMDB"). Notifications: ntfy. Unofficial; not associated with Formula 1.
